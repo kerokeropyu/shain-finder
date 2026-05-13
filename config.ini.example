@@ -1,0 +1,9 @@
+[oracle]
+host     = localhost
+port     = 1521
+service  = ORCL
+user     = your_user
+password = your_password
+
+[app]
+company_code = 2

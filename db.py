@@ -25,6 +25,19 @@ def get_company_code() -> int:
     return int(_config()["app"]["company_code"])
 
 
+def get_branches_with_seq() -> list[tuple]:
+    with closing(_connect()) as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT branch_id, branch_name, seq
+                FROM mst_branches
+                WHERE seq > 0
+                  AND is_deleted = 0
+                ORDER BY branch_name
+            """)
+            return cur.fetchall()
+
+
 def get_branches() -> list[tuple]:
     with closing(_connect()) as conn:
         with conn.cursor() as cur:

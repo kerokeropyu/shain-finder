@@ -72,6 +72,14 @@ class App(ctk.CTk):
         )
         self._search_btn.pack(side="left")
 
+        self._menu_btn = ctk.CTkButton(
+            top, text="▼", width=36, command=self._show_menu
+        )
+        self._menu_btn.pack(side="right")
+
+        self._menu = tk.Menu(self, tearoff=False)
+        self._menu.add_command(label="支店コード確認", command=self._open_branch_dialog)
+
         self._status_var = tk.StringVar(value="")
         status = ctk.CTkLabel(
             self,
@@ -134,6 +142,70 @@ class App(ctk.CTk):
 
         tree.bind("<ButtonRelease-1>", self._on_cell_click)
         return tree
+
+    # ── メニュー ────────────────────────────────────
+
+    def _show_menu(self) -> None:
+        btn = self._menu_btn
+        x = btn.winfo_rootx()
+        y = btn.winfo_rooty() + btn.winfo_height()
+        self._menu.tk_popup(x, y)
+
+    def _open_branch_dialog(self) -> None:
+        win = tk.Toplevel(self)
+        win.title("支店コード一覧")
+        win.geometry("420x400")
+        win.minsize(320, 200)
+        win.configure(bg=_TREE_BG)
+
+        cols = ("branch_id", "branch_name", "seq")
+        headers = ("支店コード", "支店名", "SEQ")
+        widths = (100, 220, 60)
+
+        frame = tk.Frame(win, bg=_TREE_BG)
+        frame.pack(fill="both", expand=True, padx=8, pady=8)
+
+        vsb = ttk.Scrollbar(frame, orient="vertical")
+        tree = ttk.Treeview(
+            frame,
+            columns=cols,
+            show="headings",
+            style="S.Treeview",
+            yscrollcommand=vsb.set,
+        )
+        vsb.configure(command=tree.yview)
+
+        for col, header, width in zip(cols, headers, widths):
+            tree.heading(col, text=header)
+            tree.column(col, width=width, minwidth=40, stretch=(col == "branch_name"))
+
+        vsb.pack(side="right", fill="y")
+        tree.pack(fill="both", expand=True)
+
+        status = ctk.CTkLabel(
+            win,
+            text="読み込み中...",
+            anchor="w",
+            fg_color=("gray80", "gray17"),
+            corner_radius=0,
+            height=24,
+        )
+        status.pack(fill="x", side="bottom")
+
+        def fetch() -> None:
+            try:
+                rows = db.get_branches_with_seq()
+                win.after(0, apply, rows)
+            except Exception as exc:
+                win.after(0, lambda: messagebox.showerror("エラー", f"支店一覧の取得に失敗しました。\n{exc}", parent=win))
+                win.after(0, lambda: status.configure(text=""))
+
+        def apply(rows: list[tuple]) -> None:
+            for row in rows:
+                tree.insert("", "end", values=row)
+            status.configure(text=f"{len(rows)} 件")
+
+        threading.Thread(target=fetch, daemon=True).start()
 
     # ── 支店読み込み ────────────────────────────────
 

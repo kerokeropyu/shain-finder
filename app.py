@@ -6,6 +6,7 @@ from tkinter import messagebox, ttk
 import customtkinter as ctk
 
 import db
+from dialogs import CreateDialog, EditDialog
 
 _COLUMNS = ("employee_id", "branch_name", "employee_name", "valid_from", "valid_to")
 _HEADERS = ("社員番号", "支店", "氏名", "有効from", "有効to")
@@ -26,6 +27,8 @@ class App(ctk.CTk):
         self.minsize(480, 300)
 
         self._branch_map: dict[str, str | None] = {"すべて": None}
+        self._branch_id_map: dict[str, str] = {}
+        self._occupation_values: list[str] = []
         self._company_code: int = 1
         self._search_seq: int = 0
         self._pending_after: str | None = None
@@ -38,6 +41,7 @@ class App(ctk.CTk):
     def _init_config(self) -> None:
         try:
             self._company_code = db.get_company_code()
+            self._occupation_values = db.get_occupation_values()
         except Exception as exc:
             messagebox.showerror("設定エラー", f"設定ファイルの読み込みに失敗しました。\n{exc}")
             return
@@ -71,6 +75,10 @@ class App(ctk.CTk):
             top, text="検索", width=70, command=self._search_now
         )
         self._search_btn.pack(side="left")
+
+        ctk.CTkButton(
+            top, text="新規作成", width=80, command=self._open_create_dialog
+        ).pack(side="left", padx=(8, 0))
 
         self._menu_btn = ctk.CTkButton(
             top, text="▼", width=36, command=self._show_menu
@@ -141,6 +149,7 @@ class App(ctk.CTk):
         tree.pack(fill="both", expand=True)
 
         tree.bind("<ButtonRelease-1>", self._on_cell_click)
+        tree.bind("<Double-ButtonRelease-1>", self._on_row_dblclick)
         return tree
 
     # ── メニュー ────────────────────────────────────
@@ -223,9 +232,11 @@ class App(ctk.CTk):
 
     def _apply_branches(self, rows: list[tuple]) -> None:
         self._branch_map = {"すべて": None}
+        self._branch_id_map = {}
         names = ["すべて"]
         for branch_id, branch_name in rows:
             self._branch_map[branch_name] = branch_id
+            self._branch_id_map[branch_id] = branch_name
             names.append(branch_name)
         self._branch_combo.configure(values=names)
         self._status_var.set("")
@@ -293,6 +304,39 @@ class App(ctk.CTk):
             self._search_btn.configure(state="disabled", text="検索中...")
         else:
             self._search_btn.configure(state="normal", text="検索")
+
+    # ── 編集・新規作成 ───────────────────────────────
+
+    def _on_row_dblclick(self, event: tk.Event) -> None:
+        row_id = self._tree.identify_row(event.y)
+        if not row_id:
+            return
+        employee_id = self._tree.item(row_id, "values")[0]
+        self._open_edit_dialog(str(employee_id))
+
+    def _open_edit_dialog(self, employee_id: str) -> None:
+        branch_names = [n for n in self._branch_map if n != "すべて"]
+        EditDialog(
+            self,
+            employee_id=employee_id,
+            branch_names=branch_names,
+            branch_map={k: v for k, v in self._branch_map.items() if k != "すべて"},
+            branch_id_map=self._branch_id_map,
+            occupations=self._occupation_values,
+            company_code=self._company_code,
+            on_saved=self._search_now,
+        )
+
+    def _open_create_dialog(self) -> None:
+        branch_names = [n for n in self._branch_map if n != "すべて"]
+        CreateDialog(
+            self,
+            branch_names=branch_names,
+            branch_map={k: v for k, v in self._branch_map.items() if k != "すべて"},
+            occupations=self._occupation_values,
+            company_code=self._company_code,
+            on_saved=self._search_now,
+        )
 
     # ── セルクリック ────────────────────────────────
 

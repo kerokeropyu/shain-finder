@@ -5,7 +5,7 @@ from tkinter import messagebox, ttk
 
 import customtkinter as ctk
 
-import db
+from . import db
 
 _COLUMNS = ("employee_id", "branch_name", "employee_name", "valid_from", "valid_to")
 _HEADERS = ("社員番号", "支店", "氏名", "有効from", "有効to")

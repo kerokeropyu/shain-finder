@@ -4,7 +4,7 @@ from pathlib import Path
 
 import oracledb
 
-_CONFIG_PATH = Path(__file__).parent / "config.ini"
+_CONFIG_PATH = Path(__file__).parent.parent / "config.ini"
 
 
 def _config() -> configparser.ConfigParser:

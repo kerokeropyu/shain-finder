@@ -57,6 +57,46 @@ python main.py
 | `mst_branches` | 実際の支店マスタテーブル名 |
 | `employee_id`, `employee_name`, ... | 実際のカラム名 |
 
+## exe 起動速度の改善
+
+PyInstaller でビルドした exe の起動が遅い場合、以下を順に試す。
+
+### 1. `--onedir` に切り替える（効果大）
+
+`--onefile` は起動のたびに `%TEMP%` へ全ファイルを展開するため遅い。  
+`--onedir` にするだけで数秒改善することが多い。
+
+```
+pyinstaller --onedir main.py
+```
+
+配布時はフォルダごと zip にすれば `--onefile` と同様に扱える。
+
+### 2. `oracledb` を遅延インポートに変更
+
+DB 接続は起動時に不要なので `src/db.py` の `_connect()` 内でインポートする。
+
+```python
+# 変更前
+import oracledb
+
+def _connect():
+    ...
+
+# 変更後（初回接続時だけロード）
+def _connect():
+    import oracledb
+    ...
+```
+
+### 3. UPX 圧縮を無効化
+
+UPX はファイルサイズを減らすが解凍コストで起動が遅くなる場合がある。
+
+```
+pyinstaller --noupx main.py
+```
+
 ## python-oracledb のモードについて
 
 デフォルトは **thin モード**（Oracle Instant Client 不要）。  

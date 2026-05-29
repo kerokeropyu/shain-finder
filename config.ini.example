@@ -7,3 +7,6 @@ password = your_password
 
 [app]
 company_code = 2
+
+[occupation]
+values = 職種A,職種B,職種C
